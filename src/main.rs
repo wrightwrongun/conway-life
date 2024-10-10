@@ -27,70 +27,11 @@
 #![allow(dead_code, unused)]
 
 mod file;
+mod life;
 mod grid;
 
-use grid::{Grid, GridCell, SimpleGrid, SizedGrid, SparseGrid};
-
-
-type LifeCellType = char;
-type LifeGridType = SimpleGrid<LifeCellType>;
-
-trait LifeGrid {
-    const DEAD_CELL: LifeCellType = ' ';
-    const LIVE_CELL: LifeCellType = '*';
-    
-    fn init_life(width: usize, height: usize) -> Self;
-
-    fn set_on(&mut self, x: usize, y: usize);
-    
-    fn set_off(&mut self, x: usize, y: usize);
-}
-
-impl LifeGrid for SimpleGrid<LifeCellType> {
-    fn init_life(width: usize, height: usize) -> Self {
-        Self::init(width, height, <LifeGridType as LifeGrid>::DEAD_CELL)
-    }
-    
-    fn set_on(&mut self, x: usize, y: usize) {
-        self.set(x, y, <LifeGridType as LifeGrid>::LIVE_CELL);
-    }
-    
-    fn set_off(&mut self, x: usize, y: usize) {
-        self.set(x, y, <LifeGridType as LifeGrid>::DEAD_CELL);
-    }
-}
-
-trait LifeCell {
-    fn is_live(&self) -> bool;
-
-    fn is_dead(&self) -> bool;
-
-    fn count_neighbours(&self) -> i16;
-}
-
-impl<'a> LifeCell for GridCell<'a, SimpleGrid<LifeCellType>> {
-    fn is_live(&self) -> bool {
-        self.get() == &<LifeGridType as LifeGrid>::LIVE_CELL
-    }
-
-    fn is_dead(&self) -> bool {
-        self.get() == &<LifeGridType as LifeGrid>::DEAD_CELL
-    }
-        
-    fn count_neighbours(&self) -> i16 {
-        let adjust = |ax: isize, ay: isize| -> i16 {
-            match self.get_relative(ax, ay) {
-                Some(x) if x == &<LifeGridType as LifeGrid>::LIVE_CELL => 1,
-                Some(_) => 0,
-                None => 0
-            }
-        };
-
-        adjust(-1, -1) + adjust(0, -1) + adjust(1, -1)
-            + adjust(-1, 0) + adjust(1, 0)
-            + adjust(-1, 1) + adjust(0, 1) + adjust(1, 1)
-    }
-}
+use life::{LifeCell, LifeGrid};
+use grid::{Grid, SimpleGrid};
 
 
 fn main() {
