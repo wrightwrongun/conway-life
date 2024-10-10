@@ -24,3 +24,98 @@
 
 ---------------------------------------------------------------------------- */
 
+use std::{collections::HashMap};
+use std::fs::{File};
+use std::io::{BufRead, BufReader};
+
+
+pub struct FileParser {
+    file_reader: BufReader<File>,
+    path: String,
+}
+
+impl FileParser {
+    pub fn init(path: &str) -> std::io::Result<Self> {
+        let file = File::open(path)?;
+
+        Ok(Self {
+            file_reader: BufReader::new(file),
+            path: String::from(path)
+        })
+    }
+
+    pub fn iter(&mut self) -> FileIterator {
+        FileIterator {
+            file_reader: &mut self.file_reader,
+            path: self.path.as_str(),
+            line_number: 0,
+            symbols: HashMap::new()
+        }
+    }
+}
+
+pub struct FileIterator<'a> {
+    file_reader: &'a mut BufReader<File>,
+    path: &'a str,
+    line_number: u32,
+    symbols: HashMap<String, String>
+}
+
+impl<'a> FileIterator<'a> {
+    fn read_line(&mut self) -> Option<String> {
+        let mut buffer = String::with_capacity(80);
+        
+        while let Ok(count) = self.file_reader.read_line(&mut buffer) {
+            self.line_number += 1;
+            if count == 0 {
+                return None;
+            }
+        
+            let line = String::from(buffer.trim());
+            buffer.clear();
+            
+            if (line.len() == 0) || (line.starts_with('#')) {
+                continue;
+            }
+
+            return Some(line);
+        }
+
+        None
+    }
+    
+    fn parse_pair(pair: &str) -> Option<(usize, usize)> {
+        if let Some((x_str, y_str)) = pair.split_once(',') {
+            if let Ok(x) = x_str.trim().parse::<usize>() {
+                if let Ok(y) = y_str.trim().parse::<usize>() {
+                    return Some((x, y));
+                }
+            }
+        }
+
+        None
+    }
+}
+
+impl<'a> Iterator for FileIterator<'a> {
+    type Item = (usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(line) = self.read_line() {
+            let first_char = line.chars().nth(0).unwrap_or('~');
+            if first_char.is_numeric() {
+                if let Some((x, y)) = Self::parse_pair(&line) {
+                    return Some((x, y));
+                }
+                else {
+                    panic!("cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path);
+                }
+            }
+            else {
+                panic!("unrecognised character '{}', at line {} of file '{}'", first_char, self.line_number, self.path);
+            }
+        }
+    
+        None
+    }
+}

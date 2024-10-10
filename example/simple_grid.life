@@ -1,0 +1,13 @@
+#
+# simple_grid.life
+#
+
+# The size of the grid (width,height)...
+20,12
+
+# The 'live' cells...
+1,2
+2,3
+3,4
+4,5
+9,0

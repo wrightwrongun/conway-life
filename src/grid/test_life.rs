@@ -24,45 +24,20 @@
 
 ---------------------------------------------------------------------------- */
 
-#![allow(dead_code, unused)]
+use super::*;
 
-mod file;
-mod life;
-mod grid;
-
-use file::FileParser;
-use life::{LifeCell, LifeGrid};
-use grid::{Grid, SimpleGrid};
+use crate::life::LifeGrid;
 
 
-fn main() {
-    let path = "example/simple_grid.life";
+#[cfg(test)]
 
-    if let Ok(mut parser) = FileParser::init(path) {
-        let mut cells = parser.iter();
+mod test_life {
+    use super::*;
+
+    #[test]
+    fn life_init() {
+        let mut grid = SimpleGrid::init_life(20, 12);    
         
-        if let Some((width, height)) = cells.next() { 
-            let mut grid = SimpleGrid::init_life(width, height);
-
-            for (x, y) in cells {
-                grid.set_on(x, y);
-            }
-
-            grid.write(&mut std::io::stdout());
-
-            let mut output = SimpleGrid::init(20, 12, 0);
-
-            for cell in &grid {
-                output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
-            }
-        
-            output.write(&mut std::io::stdout());
-        }
-        else {
-            panic!("cannot find width+height from file '{}'", path);
-        }
-    }
-    else {
-        panic!("cannot open file '{}'", path);
+        assert_eq!(grid.get(5, 5), &' ');
     }
 }
