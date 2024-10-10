@@ -24,13 +24,10 @@
 
 ---------------------------------------------------------------------------- */
 
-use super::*;
-
-
 #[cfg(test)]
 
 mod test_gridcell {
-    use super::*;
+    use crate::grid::*;
 
     #[test]
     fn gridcell_get() {

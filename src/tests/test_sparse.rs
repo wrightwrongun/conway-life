@@ -24,13 +24,10 @@
 
 ---------------------------------------------------------------------------- */
 
-use super::*;
-
-
 #[cfg(test)]
 
 mod test_sparse {
-    use super::*;
+    use crate::grid::*;
 
     #[test]
     fn sparse_new() {

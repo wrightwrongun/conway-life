@@ -30,12 +30,12 @@ mod env;
 mod file;
 mod life;
 mod grid;
+mod tests;
 
 use env::{ArgsHelper, OptionUnwrapExit, ResultUnwrapExit};
 use file::FileParser;
 use life::{LifeCell, LifeGrid};
 use grid::{Grid, SimpleGrid};
-
 
 
 fn main() {

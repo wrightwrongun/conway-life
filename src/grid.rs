@@ -24,12 +24,6 @@
 
 ---------------------------------------------------------------------------- */
 
-mod test_gridcell;
-mod test_life;
-mod test_simple;
-mod test_sparse;
-
-
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use std::default;

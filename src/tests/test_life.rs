@@ -24,15 +24,11 @@
 
 ---------------------------------------------------------------------------- */
 
-use super::*;
-
-use crate::life::LifeGrid;
-
-
 #[cfg(test)]
 
 mod test_life {
-    use super::*;
+    use crate::grid::*;
+    use crate::life::*;
 
     #[test]
     fn life_init() {

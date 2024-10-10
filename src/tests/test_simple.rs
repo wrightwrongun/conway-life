@@ -24,13 +24,10 @@
 
 ---------------------------------------------------------------------------- */
 
-use super::*;
-
-
 #[cfg(test)]
 
 mod test_simple {
-    use super::*;
+    use crate::grid::*;
 
     #[test]
     fn simple_init_from() {
