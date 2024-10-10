@@ -70,6 +70,8 @@ pub trait SizedGrid : Grid {
     fn get_height(&self) -> usize;
 }
 
+type GridIndexTuple = (usize, usize);
+
 
 //---------------------------------------------------------------------------//
 
@@ -221,16 +223,16 @@ impl<'a, T> IntoIterator for &'a SimpleGrid<T> {
     }
 }
 
-impl<T> Index<(usize, usize)> for SimpleGrid<T> {
+impl<T> Index<GridIndexTuple> for SimpleGrid<T> {
     type Output = T;
     
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
+    fn index(&self, index: GridIndexTuple) -> &Self::Output {
         self.get(index.0, index.1)
     }
 }
 
-impl<T> IndexMut<(usize, usize)> for SimpleGrid<T> {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+impl<T> IndexMut<GridIndexTuple> for SimpleGrid<T> {
+    fn index_mut(&mut self, index: GridIndexTuple) -> &mut Self::Output {
         self.get_mut(index.0, index.1)
     }
 }
@@ -468,16 +470,16 @@ impl<'a, T> IntoIterator for &'a SparseGrid<T> where T: Default {
     }
 }
 
-impl<T> Index<(usize, usize)> for SparseGrid<T> where T: Default {
+impl<T> Index<GridIndexTuple> for SparseGrid<T> where T: Default {
     type Output = T;
     
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
+    fn index(&self, index: GridIndexTuple) -> &Self::Output {
         self.get(index.0, index.1)
     }
 }
 
-impl<T> IndexMut<(usize, usize)> for SparseGrid<T> where T: Default {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+impl<T> IndexMut<GridIndexTuple> for SparseGrid<T> where T: Default {
+    fn index_mut(&mut self, index: GridIndexTuple) -> &mut Self::Output {
         self.get_mut(index.0, index.1)
     }
 }

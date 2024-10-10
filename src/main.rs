@@ -26,69 +26,89 @@
 
 #![allow(dead_code, unused)]
 
+mod file;
 mod grid;
-
-use std::io::stdout;
 
 use grid::{Grid, GridCell, SimpleGrid, SizedGrid, SparseGrid};
 
 
-fn count_neighbours<T>(cell: &GridCell<T>, f: impl Fn(&T::Item) -> bool) -> u32 where T: SizedGrid {
-    let adjust = |ax: isize, ay: isize| -> u32 {
-        match cell.get_relative(ax, ay) {
-            Some(x) if f(x) => 1,
-            Some(_) => 0,
-            None => 0
-        }
-    };
+type LifeCellType = char;
+type LifeGridType = SimpleGrid<LifeCellType>;
 
-    adjust(-1, -1) + adjust(0, -1) + adjust(1, -1)
-        + adjust(-1, 0) + adjust(1, 0)
-        + adjust(-1, 1) + adjust(0, 1) + adjust(1, 1)
+trait LifeGrid {
+    const DEAD_CELL: LifeCellType = ' ';
+    const LIVE_CELL: LifeCellType = '*';
+    
+    fn init_life(width: usize, height: usize) -> Self;
+
+    fn set_on(&mut self, x: usize, y: usize);
+    
+    fn set_off(&mut self, x: usize, y: usize);
+}
+
+impl LifeGrid for SimpleGrid<LifeCellType> {
+    fn init_life(width: usize, height: usize) -> Self {
+        Self::init(width, height, <LifeGridType as LifeGrid>::DEAD_CELL)
+    }
+    
+    fn set_on(&mut self, x: usize, y: usize) {
+        self.set(x, y, <LifeGridType as LifeGrid>::LIVE_CELL);
+    }
+    
+    fn set_off(&mut self, x: usize, y: usize) {
+        self.set(x, y, <LifeGridType as LifeGrid>::DEAD_CELL);
+    }
+}
+
+trait LifeCell {
+    fn is_live(&self) -> bool;
+
+    fn is_dead(&self) -> bool;
+
+    fn count_neighbours(&self) -> i16;
+}
+
+impl<'a> LifeCell for GridCell<'a, SimpleGrid<LifeCellType>> {
+    fn is_live(&self) -> bool {
+        self.get() == &<LifeGridType as LifeGrid>::LIVE_CELL
+    }
+
+    fn is_dead(&self) -> bool {
+        self.get() == &<LifeGridType as LifeGrid>::DEAD_CELL
+    }
+        
+    fn count_neighbours(&self) -> i16 {
+        let adjust = |ax: isize, ay: isize| -> i16 {
+            match self.get_relative(ax, ay) {
+                Some(x) if x == &<LifeGridType as LifeGrid>::LIVE_CELL => 1,
+                Some(_) => 0,
+                None => 0
+            }
+        };
+
+        adjust(-1, -1) + adjust(0, -1) + adjust(1, -1)
+            + adjust(-1, 0) + adjust(1, 0)
+            + adjust(-1, 1) + adjust(0, 1) + adjust(1, 1)
+    }
 }
 
 
 fn main() {
-    let mut grid = SimpleGrid::<u32>::new(32, 12);
-    // let mut grid = SparseGrid::<u32>::new();
+    let mut grid = SimpleGrid::init_life(20, 12);
 
-    // grid.set(1, 1, 7);
-    // grid.set(10, 4, 7);
-    // grid.set(11, 4, 7);
-    // grid.set(12, 4, 7);
-    // grid.set(20, 8, 7);
-    // grid.set(11, 4, 3);
+    grid.set_on(10, 5);
+    grid.set_on(11, 5);
+    grid.set_on(12, 5);
 
-    // grid[(25, 15)] = 1;
+    grid.write(&mut std::io::stdout());
 
-    grid.set(1, 1, 7);
-    grid.set(2, 1, 7);
-    grid.set(3, 1, 7);
+    println!("-------------");
 
-    let c = grid.get_cell(2, 1);
-    let r = c.get_relative_cell(-1, -1);
-
-    println!("{:?}", c);
-    println!("{:?}", r.unwrap());
-
-    // for cell in &grid {
-    //     println!("{:?}", cell);
-    // }
-
-
-    // grid.iter()
-    //     .filter(|c| *c.get() > 0)
-    //     // .filter(|c| count_neighbours(&c, |x| *x > 0) > 0)
-    //     .inspect(|c| println!("GridCell({},{}) = {:?} [{}]", c.get_x(), c.get_y(), c.get(), count_neighbours(&c, |x| *x > 0)))
-    //     .collect::<Vec<_>>();
-
-    let mut output = SimpleGrid::<u32>::new(32, 12);
+    let mut output = SimpleGrid::init(20, 12, 0);
 
     for cell in &grid {
-        output.set(cell.get_x(), cell.get_y(), count_neighbours(&cell, |x| *x > 0));
+        output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
     }
 
-    grid.write(&mut stdout());
-    println!("------------------------------");
-    output.write(&mut stdout());
+    output.write(&mut std::io::stdout());
 }
