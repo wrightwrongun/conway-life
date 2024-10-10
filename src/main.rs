@@ -26,43 +26,50 @@
 
 #![allow(dead_code, unused)]
 
+mod env;
 mod file;
 mod life;
 mod grid;
 
+use env::{ArgsHelper, OptionUnwrapExit, ResultUnwrapExit};
 use file::FileParser;
 use life::{LifeCell, LifeGrid};
 use grid::{Grid, SimpleGrid};
 
 
+
 fn main() {
-    let path = "example/simple_grid.life";
+    // Expect 2 command-line arguments (excluding options) - so exit the
+    // program if the incorrect number of arguments are found...
+    let args = ArgsHelper::expect(2, "expected <input-file-path> <iterations>");
 
-    if let Ok(mut parser) = FileParser::init(path) {
-        let mut cells = parser.iter();
-        
-        if let Some((width, height)) = cells.next() { 
-            let mut grid = SimpleGrid::init_life(width, height);
+    // Assign the given command-line arguments...
+    let path = &args[0];
+    let is_verbose = args.has_option("-v");
+    let iterations = args[1].parse::<usize>().unwrap_or_exit(format!("argument '{}' is not a valid iteration value", args[1]));
 
-            for (x, y) in cells {
-                grid.set_on(x, y);
-            }
+    // Open the file containing the grid/cell info...
+    let mut parser = FileParser::init(path.as_str()).unwrap_or_exit(format!("error: cannot open file '{}'", path));
+    let mut cells = parser.iter();
+    
+    // Create an empty 'life' grid with the dimensions given in the file...
+    let (width, height) = cells.next().unwrap_or_exit(format!("error: cannot find width+height from file '{}'", path));
+    let mut grid = SimpleGrid::init_life(width, height);
 
-            grid.write(&mut std::io::stdout());
-
-            let mut output = SimpleGrid::init(20, 12, 0);
-
-            for cell in &grid {
-                output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
-            }
-        
-            output.write(&mut std::io::stdout());
-        }
-        else {
-            panic!("cannot find width+height from file '{}'", path);
-        }
+    // Loop through the cell info given in the file, setting a grid-cell to
+    // 'live' for each cell...
+    for (x, y) in cells {
+        grid.set_on(x, y);
     }
-    else {
-        panic!("cannot open file '{}'", path);
+
+    // Print the populated grid to std-out...
+    grid.write(&mut std::io::stdout());
+
+    // DEBUG: Print a grid containing the neighbour-count for each cell in the
+    // populated grid...
+    let mut output = SimpleGrid::init(20, 12, 0);
+    for cell in &grid {
+        output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
     }
+    output.write(&mut std::io::stdout());
 }

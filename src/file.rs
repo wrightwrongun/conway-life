@@ -28,6 +28,8 @@ use std::{collections::HashMap};
 use std::fs::{File};
 use std::io::{BufRead, BufReader};
 
+use crate::env::{exit_with_error, OptionUnwrapExit};
+
 
 pub struct FileParser {
     file_reader: BufReader<File>,
@@ -101,21 +103,15 @@ impl<'a> Iterator for FileIterator<'a> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(line) = self.read_line() {
-            let first_char = line.chars().nth(0).unwrap_or('~');
-            if first_char.is_numeric() {
-                if let Some((x, y)) = Self::parse_pair(&line) {
-                    return Some((x, y));
-                }
-                else {
-                    panic!("cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path);
-                }
-            }
-            else {
-                panic!("unrecognised character '{}', at line {} of file '{}'", first_char, self.line_number, self.path);
-            }
+        let line = self.read_line()?;
+        
+        let first_char = line.chars().nth(0).unwrap_or('~');
+        if first_char.is_numeric() {
+            return Some(Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path)));
         }
-    
-        None
+        else {
+            exit_with_error(format!("error: unrecognised character '{}', at line {} of file '{}'", first_char, self.line_number, self.path));
+            None
+        }
     }
 }
