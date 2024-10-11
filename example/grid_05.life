@@ -1,0 +1,28 @@
+#
+# simple_grid.life
+#
+
+# The size of the grid (width,height)...
+20,12
+
+# Stuff...
+#2,1
+#3,1
+#4,1
+
+:Spinner
+    1,0
+    1,1
+    1,2
+;
+
+:DoubleSpinner
+    Spinner 1,1
+    Spinner 5,5
+;
+
+DoubleSpinner 3, 3
+
+9,10
+10,10
+11,10

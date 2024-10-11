@@ -1,0 +1,30 @@
+#
+# simple_grid.life
+#
+
+# The size of the grid (width,height)...
+32,24
+
+:Beacon
+ 8,4
+ 9,4
+ 8,5
+ 9,5
+ 10,6
+ 11,6
+ 10,7
+ 11,7
+;
+
+:Toad
+ 14,8
+ 12,9
+ 15,9
+ 12,10
+ 15,10
+ 13,11
+;
+
+Beacon 2,2
+
+Toad 16,12
