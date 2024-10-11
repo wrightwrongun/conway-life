@@ -194,13 +194,19 @@ impl<T> SimpleGrid<T> where T: Display {
     /// 
     /// To write to standard-out, `grid.write(&mut stdout())`.
     pub fn write(&self, w: &mut dyn Write) {
+        w.write(format!("/{}\\\n", "-".repeat(self.width)).as_bytes());
+        
+        let mut line = String::with_capacity(self.width);
         for row in &self.rows {
             for column in row {
-                w.write(format!("{}", column).as_bytes());
+                line += format!("{}", column).as_str();
             }
             
-            w.write("\n".as_bytes());
+            w.write(format!("|{}|\n", line).as_bytes());
+            line.clear();
         }
+
+        w.write(format!("\\{}/\n", "-".repeat(self.width)).as_bytes());
     }
 }
 
