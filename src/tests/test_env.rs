@@ -24,8 +24,38 @@
 
 ---------------------------------------------------------------------------- */
 
-mod test_env;
-mod test_gridcell;
-mod test_life;
-mod test_simple;
-mod test_sparse;
+#[cfg(test)]
+
+mod test_sparse {
+    use crate::env::*;
+
+    #[test]
+    fn env_option_unwrap_exit_some() {
+        let opt = Some(99);
+
+        assert_eq!(opt.unwrap_or_exit(String::from("hello, world!")), 99);
+    }
+
+    #[test]
+    fn env_option_unwrap_exit_none() {
+        let opt: Option<i32> = None;
+
+        // Can't test this as it kills the test process...
+        //assert_eq!(opt.unwrap_or_exit(String::from("hello, world!")), 99);
+    }
+
+    #[test]
+    fn env_result_unwrap_exit_ok() {
+        let res: Result<i32,()> = Ok(99);
+
+        assert_eq!(res.unwrap_or_exit(String::from("hello, world!")), 99);
+    }
+
+    #[test]
+    fn env_result_unwrap_exit_err() {
+        let res: Result<i32,String> = Err(String::from("bang"));
+
+        // Can't test this as it kills the test process...
+        //assert_eq!(res.unwrap_or_exit(String::from("hello, world!")), 99);
+    }
+}

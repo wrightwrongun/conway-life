@@ -97,11 +97,17 @@ pub fn exit_with_error(message: String) {
     std::process::exit(0);
 }
 
+/// Extension trait for `Option'.
+/// 
+/// Simplifies error-handling where a `None` means that the program should
+/// not continue.
 pub trait OptionUnwrapExit<T> {
     fn unwrap_or_exit(self, message: String) -> T;    
 }
 
 impl<T> OptionUnwrapExit<T> for Option<T> {
+    /// Attempts to unwrap an `Option' - prints a message to std-err and exits
+    /// the program if the unwrap is not successful.
     fn unwrap_or_exit(self, message: String) -> T {
         match self {
             Some(value) => value,
@@ -113,11 +119,17 @@ impl<T> OptionUnwrapExit<T> for Option<T> {
     }
 }
 
+/// Extension trait for `Result'.
+/// 
+/// Simplifies error-handling where an `Err` means that the program should
+/// not continue.
 pub trait ResultUnwrapExit<T> {
     fn unwrap_or_exit(self, message: String) -> T;    
 }
 
 impl<T, E> ResultUnwrapExit<T> for Result<T, E> {
+    /// Attempts to unwrap a `Result' - prints a message to std-err and exits
+    /// the program if the unwrap is not successful.
     fn unwrap_or_exit(self, message: String) -> T {
         match self {
             Ok(value) => value,
