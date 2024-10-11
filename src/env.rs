@@ -94,7 +94,7 @@ impl Index<usize> for ArgsHelper {
 
 pub fn exit_with_error(message: String) {
     eprintln!("{}", message);
-    std::process::exit(0);
+    std::process::exit(1);
 }
 
 /// Extension trait for `Option'.

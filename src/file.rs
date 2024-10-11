@@ -24,11 +24,61 @@
 
 ---------------------------------------------------------------------------- */
 
+use std::marker::PhantomData;
 use std::{collections::HashMap};
-use std::fs::{File};
-use std::io::{BufRead, BufReader};
+use std::fs::{read, File};
+use std::io::{BufRead, BufReader, Read};
 
 use crate::env::{exit_with_error, OptionUnwrapExit};
+
+
+pub type BufferType = [u8];
+pub type BufferSlice<'t> = &'t BufferType;
+
+/// Simplifies reading from a file or a string.
+/// 
+/// 
+pub struct ReadBuffer<'a> {
+    buffer: Vec<u8>,
+    _nothing: BufferSlice<'a>   // Unused - here to satisfy the 'a constraint!
+}
+
+impl<'a> ReadBuffer<'a> {
+    /// Initialises the buffer with the contents of a file.
+    pub fn from_path(path: &str) -> std::io::Result<Self> {
+        let mut file = File::open(path)?;
+
+        let mut buffer: Vec<u8> = Vec::new();
+        file.read_to_end(&mut buffer);
+        buffer.shrink_to_fit();
+        
+        Ok(Self {
+            buffer: buffer,
+            _nothing: &[0]
+        })
+    }
+    
+    /// Initialises the buffer with the contents of a string.
+    pub fn from_string(text: &str) -> Self {
+        Self {
+            buffer: Vec::from(text),
+            _nothing: &[0]
+        }
+    }
+
+    /// Gives a reference to the contents of the buffer.
+    pub fn as_slice(&'a self) -> BufferSlice<'a> {
+        &self.buffer.as_slice()
+    }
+
+    /// Gives a reader for the contents of the buffer.
+    pub fn reader(&'a self) -> BufReader<BufferSlice<'a>> {
+        BufReader::new(self.as_slice())
+    }
+}
+
+
+//---------------------------------------------------------------------------//
 
 
 pub struct FileParser {

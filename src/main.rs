@@ -32,6 +32,8 @@ mod life;
 mod grid;
 mod tests;
 
+use std::io::BufRead;
+
 use env::{ArgsHelper, OptionUnwrapExit, ResultUnwrapExit};
 use file::FileParser;
 use life::{LifeCell, LifeGrid};
@@ -41,12 +43,12 @@ use grid::{Grid, SimpleGrid};
 fn main() {
     // Expect 2 command-line arguments (excluding options) - so exit the
     // program if the incorrect number of arguments are found...
-    let args = ArgsHelper::expect(2, "expected <input-file-path> <iterations>");
+    let args = ArgsHelper::expect(2, "expected [-v] <input-file-path> <iterations>");
 
     // Assign the given command-line arguments...
     let path = &args[0];
     let is_verbose = args.has_option("-v");
-    let iterations = args[1].parse::<usize>().unwrap_or_exit(format!("argument '{}' is not a valid iteration value", args[1]));
+    let iterations = args[1].parse::<usize>().unwrap_or_exit(format!("error: argument '{}' is not a valid iteration value", args[1]));
 
     // Open the file containing the grid/cell info...
     let mut parser = FileParser::init(path.as_str()).unwrap_or_exit(format!("error: cannot open file '{}'", path));
