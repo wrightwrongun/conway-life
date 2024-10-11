@@ -37,7 +37,7 @@ use std::io::{BufRead, IsTerminal};
 use env::{ArgsHelper, OptionUnwrapExit, ResultUnwrapExit};
 use file::FileParser;
 use life::{LifeCell, LifeGrid};
-use grid::{Grid, SimpleGrid};
+use grid::{Grid, GridCell, SimpleGrid};
 
 
 fn main() {
@@ -47,8 +47,9 @@ fn main() {
 
     // Assign the given command-line arguments...
     let path = &args[0];
+    let is_debug = args.has_option("-d");
     let is_verbose = args.has_option("-v");
-    let iterations = args[1].parse::<usize>().unwrap_or_exit(format!("error: argument '{}' is not a valid iteration value", args[1]));
+    let cycles = args[1].parse::<usize>().unwrap_or_exit(format!("error: argument '{}' is not a valid iteration value", args[1]));
 
     // Open the file containing the grid/cell info...
     let mut parser = FileParser::from_path(path.as_str()).unwrap_or_exit(format!("error: cannot open file '{}'", path));
@@ -56,24 +57,56 @@ fn main() {
     
     // Create an empty 'life' grid with the dimensions given in the file...
     let (width, height) = cells.next().unwrap_or_exit(format!("error: cannot find width+height from file '{}'", path));
-    let mut grid = SimpleGrid::init_life(width, height);
+    let mut life_grid = SimpleGrid::init_life(width, height);
 
     // Loop through the cell info given in the file, setting a grid-cell to
     // 'live' for each cell...
     for (x, y) in cells {
-        grid.set_live(x, y);
+        life_grid.set_live(x, y);
     }
 
-    // Print the populated grid to std-out...
-    if std::io::stdout().is_terminal() {
-        grid.write(&mut std::io::stdout());
-
-        // DEBUG: Print a grid containing the neighbour-count for each cell in the
-        // populated grid...
-        let mut output = SimpleGrid::init(width, height, 0);
-        for cell in &grid {
-            output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
+    // Print the starting grid...
+    println!("Starting:");
+    life_grid.write(&mut std::io::stdout());
+    
+    // Iterate for the given number of cycles...
+    for count in 1..=cycles {
+        let mut neighbours_grid = SimpleGrid::init(width, height, 0);
+        for cell in &life_grid {
+            neighbours_grid.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
         }
-        output.write(&mut std::io::stdout());
+
+        let mut new_grid = SimpleGrid::init_life(width, height);
+        for cell in &life_grid {
+            let neighbour_count = neighbours_grid[(cell.get_x(), cell.get_y())];
+            
+            if (cell.is_live()) {
+                if [2, 3].contains(&neighbour_count) {
+                    new_grid.set_live(cell.get_x(), cell.get_y());
+                }
+            }
+            else {
+                if neighbour_count == 3 {
+                    new_grid.set_live(cell.get_x(), cell.get_y());
+                }
+            }
+        }        
+    
+        // DEBUG: Print the neighbour-count grid...
+        if is_debug {
+            neighbours_grid.write(&mut std::io::stdout());
+        }
+
+        if is_verbose {
+            println!("iteration: {}", count);
+            new_grid.write(&mut std::io::stdout());
+        }
+
+        // Swap to the new grid...
+        life_grid = new_grid;
     }
+
+    // Print the ending grid...
+    println!("Final iteration {}:", cycles);
+    life_grid.write(&mut std::io::stdout());
 }

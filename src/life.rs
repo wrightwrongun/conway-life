@@ -71,7 +71,7 @@ pub trait LifeCell {
     fn is_dead(&self) -> bool;
 
     /// Indicates how many of the cell's neighbours are 'live'.
-    fn count_neighbours(&self) -> i16;
+    fn count_neighbours(&self) -> i32;
 }
 
 impl<'a> LifeCell for GridCell<'a, LifeGridType> {
@@ -83,11 +83,11 @@ impl<'a> LifeCell for GridCell<'a, LifeGridType> {
         self.get() == &<LifeGridType as LifeGrid>::DEAD_CELL
     }
     
-    fn count_neighbours(&self) -> i16 {
+    fn count_neighbours(&self) -> i32 {
         // Use an 'adjust' closure to convert the neighbouring cells (which
         // may not be within bounds) to a simple 1 for existing & live, or
         // 0 for non-existing or dead...
-        let adjust = |ax: isize, ay: isize| -> i16 {
+        let adjust = |ax: isize, ay: isize| -> i32 {
             match self.get_relative(ax, ay) {
                 // Could use `is_live()` here but that would require a
                 // call to `get_relative_cell()` instead of `get_relative()`
