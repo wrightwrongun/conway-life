@@ -61,7 +61,7 @@ fn main() {
     // Loop through the cell info given in the file, setting a grid-cell to
     // 'live' for each cell...
     for (x, y) in cells {
-        grid.set_on(x, y);
+        grid.set_live(x, y);
     }
 
     // Print the populated grid to std-out...

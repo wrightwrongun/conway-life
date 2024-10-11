@@ -34,36 +34,47 @@ pub trait LifeGrid {
     const DEAD_CELL: LifeCellType = ' ';
     const LIVE_CELL: LifeCellType = '*';
     
+    /// Initialises a grid with 'dead' cells.
     fn init_life(width: usize, height: usize) -> Self;
 
-    fn set_on(&mut self, x: usize, y: usize);
+    /// Sets a cell to 'live'.
+    /// 
+    /// See `is_live()`.
+    fn set_live(&mut self, x: usize, y: usize);
     
-    fn set_off(&mut self, x: usize, y: usize);
+
+    /// Sets a cell to 'dead'.
+    /// 
+    /// See `is_dead()`.
+    fn set_dead(&mut self, x: usize, y: usize);
 }
 
-impl LifeGrid for SimpleGrid<LifeCellType> {
+impl LifeGrid for LifeGridType {
     fn init_life(width: usize, height: usize) -> Self {
         Self::init(width, height, <LifeGridType as LifeGrid>::DEAD_CELL)
     }
     
-    fn set_on(&mut self, x: usize, y: usize) {
+    fn set_live(&mut self, x: usize, y: usize) {
         self.set(x, y, <LifeGridType as LifeGrid>::LIVE_CELL);
     }
     
-    fn set_off(&mut self, x: usize, y: usize) {
+    fn set_dead(&mut self, x: usize, y: usize) {
         self.set(x, y, <LifeGridType as LifeGrid>::DEAD_CELL);
     }
 }
 
 pub trait LifeCell {
+    /// Indicates if this cell is 'live'.
     fn is_live(&self) -> bool;
 
+    /// Indicates if this cell is 'dead'.
     fn is_dead(&self) -> bool;
 
+    /// Indicates how many of the cell's neighbours are 'live'.
     fn count_neighbours(&self) -> i16;
 }
 
-impl<'a> LifeCell for GridCell<'a, SimpleGrid<LifeCellType>> {
+impl<'a> LifeCell for GridCell<'a, LifeGridType> {
     fn is_live(&self) -> bool {
         self.get() == &<LifeGridType as LifeGrid>::LIVE_CELL
     }
@@ -71,13 +82,18 @@ impl<'a> LifeCell for GridCell<'a, SimpleGrid<LifeCellType>> {
     fn is_dead(&self) -> bool {
         self.get() == &<LifeGridType as LifeGrid>::DEAD_CELL
     }
-        
+    
     fn count_neighbours(&self) -> i16 {
         // Use an 'adjust' closure to convert the neighbouring cells (which
         // may not be within bounds) to a simple 1 for existing & live, or
         // 0 for non-existing or dead...
         let adjust = |ax: isize, ay: isize| -> i16 {
             match self.get_relative(ax, ay) {
+                // Could use `is_live()` here but that would require a
+                // call to `get_relative_cell()` instead of `get_relative()`
+                // - doing so for all of a cell's neighbours would mean
+                // instantiation of 8 new `GridCell`'s. So, instead, just do
+                // a direct comparison of the relative's (if any) contents... 
                 Some(x) if x == &<LifeGridType as LifeGrid>::LIVE_CELL => 1,
                 _ => 0
             }
