@@ -85,10 +85,8 @@ fn main() {
                     new_grid.set_live(cell.get_x(), cell.get_y());
                 }
             }
-            else {
-                if neighbour_count == 3 {
-                    new_grid.set_live(cell.get_x(), cell.get_y());
-                }
+            else if neighbour_count == 3 {
+                new_grid.set_live(cell.get_x(), cell.get_y());
             }
         }        
     
