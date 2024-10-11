@@ -24,8 +24,8 @@
 
 ---------------------------------------------------------------------------- */
 
-use std::fmt::Debug;
-use std::ops::Index;
+use std::fmt::{Debug, Display};
+use std::ops::{Index};
 use std::{env};
 use std::vec::{Vec};
 
@@ -119,7 +119,7 @@ impl<T> OptionUnwrapExit<T> for Option<T> {
     }
 }
 
-/// Extension trait for `Result'.
+/// Extension trait for `Result`.
 /// 
 /// Simplifies error-handling where an `Err` means that the program should
 /// not continue.
@@ -137,6 +137,27 @@ impl<T, E> ResultUnwrapExit<T> for Result<T, E> {
                 exit_with_error(message);
                 panic!("");                 // This line never reached - only here to satisfy return value!
             }
+        }
+    }
+}
+
+/// Extension trait for `Option`.
+/// 
+/// Simplifies display of optional values.
+pub trait OptionUnwrapDisplay<T> where T: Display {
+    fn unwrap_display(&self) -> String;
+    fn unwrap_display_or(&self, message: &str) -> String;
+}
+
+impl<T> OptionUnwrapDisplay<T> for Option<T> where T: Display {
+    fn unwrap_display(&self) -> String {
+        self.unwrap_display_or("None")
+    }
+
+    fn unwrap_display_or(&self, message: &str) -> String {
+        match self {
+            Some(x) => format!("{}", x),
+            _ => String::from(message)
         }
     }
 }

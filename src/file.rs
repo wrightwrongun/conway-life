@@ -29,7 +29,7 @@ use std::{collections::HashMap};
 use std::fs::{read, File};
 use std::io::{BufRead, BufReader, Read};
 
-use crate::env::{exit_with_error, OptionUnwrapExit};
+use crate::env::{exit_with_error, OptionUnwrapDisplay, OptionUnwrapExit};
 
 
 pub type BufferType = [u8];
@@ -81,25 +81,31 @@ impl<'a> ReadBuffer<'a> {
 //---------------------------------------------------------------------------//
 
 
-pub struct FileParser {
-    file_reader: BufReader<File>,
-    path: String,
+pub struct FileParser<'a> {
+    buffer: ReadBuffer<'a>,
+    path: Option<String>,
 }
 
-impl FileParser {
-    pub fn init(path: &str) -> std::io::Result<Self> {
-        let file = File::open(path)?;
+impl<'a> FileParser<'a> {
+    pub fn from_string(contents: &str) -> Self {
+        Self::init(ReadBuffer::from_string(contents), None)
+    }
 
-        Ok(Self {
-            file_reader: BufReader::new(file),
-            path: String::from(path)
-        })
+    pub fn from_path(path: &str) -> std::io::Result<Self> {
+        Ok(Self::init(ReadBuffer::from_path(path)?, Some(String::from(path))))
+    }
+
+    pub fn init(buffer: ReadBuffer<'a>, path: Option<String>) -> Self {
+        Self {
+            buffer: buffer,
+            path: path
+        }
     }
 
     pub fn iter(&mut self) -> FileIterator {
         FileIterator {
-            file_reader: &mut self.file_reader,
-            path: self.path.as_str(),
+            reader: self.buffer.reader(),
+            path: self.path.clone(),
             line_number: 0,
             symbols: HashMap::new()
         }
@@ -107,8 +113,8 @@ impl FileParser {
 }
 
 pub struct FileIterator<'a> {
-    file_reader: &'a mut BufReader<File>,
-    path: &'a str,
+    reader: BufReader<BufferSlice<'a>>,
+    path: Option<String>,
     line_number: u32,
     symbols: HashMap<String, String>
 }
@@ -117,7 +123,7 @@ impl<'a> FileIterator<'a> {
     fn read_line(&mut self) -> Option<String> {
         let mut buffer = String::with_capacity(80);
         
-        while let Ok(count) = self.file_reader.read_line(&mut buffer) {
+        while let Ok(count) = self.reader.read_line(&mut buffer) {
             self.line_number += 1;
             if count == 0 {
                 return None;
@@ -157,10 +163,10 @@ impl<'a> Iterator for FileIterator<'a> {
         
         let first_char = line.chars().nth(0).unwrap_or('~');
         if first_char.is_numeric() {
-            return Some(Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path)));
+            return Some(Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path.unwrap_display_or("*unknown*"))));
         }
         else {
-            exit_with_error(format!("error: unrecognised character '{}', at line {} of file '{}'", first_char, self.line_number, self.path));
+            exit_with_error(format!("error: unrecognised character '{}', at line {} of file '{}'", first_char, self.line_number, self.path.unwrap_display_or("*unknown*")));
             None
         }
     }

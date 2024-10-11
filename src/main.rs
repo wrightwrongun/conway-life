@@ -51,7 +51,7 @@ fn main() {
     let iterations = args[1].parse::<usize>().unwrap_or_exit(format!("error: argument '{}' is not a valid iteration value", args[1]));
 
     // Open the file containing the grid/cell info...
-    let mut parser = FileParser::init(path.as_str()).unwrap_or_exit(format!("error: cannot open file '{}'", path));
+    let mut parser = FileParser::from_path(path.as_str()).unwrap_or_exit(format!("error: cannot open file '{}'", path));
     let mut cells = parser.iter();
     
     // Create an empty 'life' grid with the dimensions given in the file...
@@ -69,7 +69,7 @@ fn main() {
 
     // DEBUG: Print a grid containing the neighbour-count for each cell in the
     // populated grid...
-    let mut output = SimpleGrid::init(20, 12, 0);
+    let mut output = SimpleGrid::init(width, height, 0);
     for cell in &grid {
         output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
     }
