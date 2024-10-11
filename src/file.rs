@@ -177,6 +177,10 @@ impl<'a> FileIterator<'a> {
 
         None
     }
+
+    fn fatal_error(&self, message: String) {
+        exit_with_error(format!("error: {}, at line {} of file '{}'", message, self.line_number, self.path.unwrap_display_or("*unknown*")));
+    }
     
     /// Converts a string containing a numeric pair into a tuple
     /// of the pair's values.
@@ -192,8 +196,81 @@ impl<'a> FileIterator<'a> {
         None
     }
 
-    fn fatal_error(&self, message: String) {
-        exit_with_error(format!("error: {}, at line {} of file '{}'", message, self.line_number, self.path.unwrap_display_or("*unknown*")));
+    fn parse_symbol_define_start(&mut self, line: String) {
+        let name = line[1..].trim();
+        if name.is_empty() {
+            self.fatal_error("symbol has no name".to_string());
+        }
+        
+        if self.symbol_name.is_some() {
+            self.fatal_error(format!("nested symbol definition '{}' is not supported", name));
+        }
+
+        let symbol = SymbolDefinition::new(name);
+
+        if let Entry::Vacant(e) = self.symbols.entry(String::from(name)) {
+            e.insert(symbol);
+        }
+        else {
+            self.symbols.entry(String::from(name)).or_insert(symbol);
+        }
+
+        self.symbol_name = Some(String::from(name));
+    }
+
+    fn parse_symbol_define_end(&mut self) {
+        if self.symbol_name.is_some() {
+            self.symbol_name = None;
+        }
+        else {
+            self.fatal_error("unexpected end of symbol definition".to_string());
+        }
+    }
+
+    fn parse_symbol_use(&mut self, line: String) -> Option<CellCoords> {
+        if let Some((name, cell)) = line.split_once(' ') {
+            let name = name.trim();
+            let offset = Self::parse_pair(cell).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", cell, self.line_number, self.path.unwrap_display_or("*unknown*")));
+        
+            if let Some(symbol) = self.symbols.get(&String::from(name)) {
+                let mut cells: Vec<CellCoords> = symbol.cells
+                                                    .iter()
+                                                    .map(|c| (c.0 + offset.0, c.1 + offset.1))
+                                                    .collect();
+
+                match self.symbol_name {
+                    Some(ref name) => {
+                        let symbol_entry = self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cells(&cells));
+                    },
+                    None => {
+                        self.buffered_cells.append(&mut cells);
+
+                        return self.buffered_cells.pop();
+                    }
+                }
+            }
+            else {
+                self.fatal_error(format!("unknown symbol '{}'", name));
+            }
+        }
+        else {
+            self.fatal_error(format!("bad symbol '{}'", line));
+        }
+
+        None
+    }
+
+    fn parse_cell(&mut self, line: String) -> Option<CellCoords> {
+        let cell = Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path.unwrap_display_or("*unknown*")));
+        match self.symbol_name {
+            Some(ref name) => {
+                self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cell(cell));
+                None
+            },
+            None => {
+                Some(cell)
+            }
+        }
     }
 }
 
@@ -202,74 +279,33 @@ impl<'a> Iterator for FileIterator<'a> {
 
     /// Gives the next parsed tuple.
     fn next(&mut self) -> Option<Self::Item> {
+        // Firstly return cells that have been provided by use of
+        // symbols...
         if !self.buffered_cells.is_empty() {
             return self.buffered_cells.pop();
         }
 
+        // Loop through the lines until a cell can be returned...
         while let Some(line) = self.read_line() {
             let first_char = line.chars().nth(0).unwrap_or('~');
             if first_char.is_numeric() {
-                let cell = Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path.unwrap_display_or("*unknown*")));
-                match self.symbol_name {
-                    Some(ref name) => {
-                        self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cell(cell));
-                    },
-                    None => {
-                        return Some(cell);
-                    }
+                // Cell...
+                if let Some(cell) = self.parse_cell(line) {
+                    return Some(cell);
                 }
             }
             else if first_char == ':' {
                 // Start of symbol definition...
-                let name = line[1..].trim();
-                if name.is_empty() {
-                    self.fatal_error("symbol has no name".to_string());
-                }
-                
-                let symbol = SymbolDefinition::new(name);
-
-                if let Entry::Vacant(e) = self.symbols.entry(String::from(name)) {
-                    e.insert(symbol);
-                }
-                else {
-                    self.symbols.entry(String::from(name)).or_insert(symbol);
-                }
-
-                self.symbol_name = Some(String::from(name));
+                self.parse_symbol_define_start(line);
             }
             else if first_char == ';' {
                 // End of symbol definition...
-                self.symbol_name = None;
+                self.parse_symbol_define_end();
             }
             else if first_char.is_alphanumeric() {
                 // Symbol use...
-                if let Some((name, cell)) = line.split_once(' ') {
-                    let name = name.trim();
-                    let offset = Self::parse_pair(cell).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", cell, self.line_number, self.path.unwrap_display_or("*unknown*")));
-                
-                    if let Some(symbol) = self.symbols.get(&String::from(name)) {
-                        let mut cells: Vec<CellCoords> = symbol.cells
-                        .iter()
-                        .map(|c| (c.0 + offset.0, c.1 + offset.1))
-                        .collect();
-
-                        match self.symbol_name {
-                            Some(ref name) => {
-                                let symbol_entry = self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cells(&cells));
-                            },
-                            None => {
-                                self.buffered_cells.append(&mut cells);
-
-                                return self.buffered_cells.pop();
-                            }
-                        }
-                    }
-                    else {
-                        self.fatal_error(format!("unknown symbol '{}'", name));
-                    }
-                }
-                else {
-                    self.fatal_error(format!("bad symbol '{}'", line));
+                if let Some(cell) = self.parse_symbol_use(line) {
+                    return Some(cell);
                 }
             }
             else {
