@@ -32,7 +32,7 @@ mod life;
 mod grid;
 mod tests;
 
-use std::io::BufRead;
+use std::io::{BufRead, IsTerminal};
 
 use env::{ArgsHelper, OptionUnwrapExit, ResultUnwrapExit};
 use file::FileParser;
@@ -65,13 +65,15 @@ fn main() {
     }
 
     // Print the populated grid to std-out...
-    grid.write(&mut std::io::stdout());
+    if std::io::stdout().is_terminal() {
+        grid.write(&mut std::io::stdout());
 
-    // DEBUG: Print a grid containing the neighbour-count for each cell in the
-    // populated grid...
-    let mut output = SimpleGrid::init(width, height, 0);
-    for cell in &grid {
-        output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
+        // DEBUG: Print a grid containing the neighbour-count for each cell in the
+        // populated grid...
+        let mut output = SimpleGrid::init(width, height, 0);
+        for cell in &grid {
+            output.set(cell.get_x(), cell.get_y(), cell.count_neighbours());
+        }
+        output.write(&mut std::io::stdout());
     }
-    output.write(&mut std::io::stdout());
 }

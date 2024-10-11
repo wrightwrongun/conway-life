@@ -26,18 +26,18 @@
 
 #[cfg(test)]
 
-mod test_sparse {
+mod test_env {
     use crate::env::*;
 
     #[test]
-    fn env_option_unwrap_exit_some() {
+    fn unwrap_exit_some() {
         let opt = Some(99);
 
         assert_eq!(opt.unwrap_or_exit(String::from("hello, world!")), 99);
     }
 
     #[test]
-    fn env_option_unwrap_exit_none() {
+    fn unwrap_exit_none() {
         let opt: Option<i32> = None;
 
         // Can't test this as it kills the test process...
@@ -45,17 +45,45 @@ mod test_sparse {
     }
 
     #[test]
-    fn env_result_unwrap_exit_ok() {
+    fn unwrap_exit_ok() {
         let res: Result<i32,()> = Ok(99);
 
         assert_eq!(res.unwrap_or_exit(String::from("hello, world!")), 99);
     }
 
     #[test]
-    fn env_result_unwrap_exit_err() {
+    fn unwrap_exit_err() {
         let res: Result<i32,String> = Err(String::from("bang"));
 
         // Can't test this as it kills the test process...
         //assert_eq!(res.unwrap_or_exit(String::from("hello, world!")), 99);
+    }
+
+    #[test]
+    fn unwrap_display_some() {
+        let opt = Some(99);
+
+        assert_eq!(opt.unwrap_display(), "99");
+    }
+
+    #[test]
+    fn unwrap_display_none() {
+        let opt: Option<i32> = None;
+
+        assert_eq!(opt.unwrap_display(), "None");
+    }
+
+    #[test]
+    fn unwrap_display_or_some() {
+        let opt = Some(99);
+
+        assert_eq!(opt.unwrap_display_or("hello, world!"), "99");
+    }
+
+    #[test]
+    fn unwrap_display_or_none() {
+        let opt: Option<i32> = None;
+
+        assert_eq!(opt.unwrap_display_or("hello, world!"), "hello, world!");
     }
 }
