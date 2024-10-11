@@ -52,7 +52,7 @@ impl<'a> ReadBuffer<'a> {
         file.read_to_end(&mut buffer);
         
         Ok(Self {
-            buffer: buffer,
+            buffer,
             _nothing: &[0]
         })
     }
@@ -72,7 +72,7 @@ impl<'a> ReadBuffer<'a> {
 
     /// Gives a reference to the contents of the buffer.
     pub fn as_slice(&'a self) -> BufferSlice<'a> {
-        &self.buffer.as_slice()
+        self.buffer.as_slice()
     }
 
     /// Gives a reader for the contents of the buffer.
@@ -112,8 +112,8 @@ impl<'a> FileParser<'a> {
     /// Initialise the parser with a pre-initialised buffer.
     pub fn init(buffer: ReadBuffer<'a>, path: Option<String>) -> Self {
         Self {
-            buffer: buffer,
-            path: path
+            buffer,
+            path
         }
     }
 
@@ -160,7 +160,7 @@ impl<'a> FileIterator<'a> {
             let line = String::from(buffer.trim());
             buffer.clear();
             
-            if (line.len() == 0) || (line.starts_with('#')) {
+            if line.is_empty() || (line.starts_with('#')) {
                 continue;
             }
 

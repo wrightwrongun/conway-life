@@ -24,8 +24,8 @@
 
 ---------------------------------------------------------------------------- */
 
-use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use std::collections::hash_map::{Entry, Iter};
 use std::default;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -41,12 +41,12 @@ pub trait Grid {
     /// Retrieves an item at given co-ordinates from the grid.
     /// 
     /// If the given co-ordinates are out of bounds, panics.
-    fn get<'a>(&'a self, x: usize, y: usize) -> &'a Self::Item;
+    fn get(&self, x: usize, y: usize) -> &Self::Item;
 
     /// Retrieves a mutable item at given co-ordinates from the grid.
     /// 
     /// If the given co-ordinates are out of bounds, panics.
-    fn get_mut<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Self::Item;
+    fn get_mut(&mut self, x: usize, y: usize) -> &mut Self::Item;
 
     /// Sets the value at the given co=ordinates in the grid.
     /// 
@@ -152,7 +152,7 @@ impl<'a, T> SimpleGrid<T> {
 impl<T> Grid for SimpleGrid<T> {
     type Item = T;
     
-    fn get<'a>(&'a self, x: usize, y: usize) -> &'a Self::Item {
+    fn get(&self, x: usize, y: usize) -> &Self::Item {
         if (x >= self.width) || (y >= self.height) {
             panic!("SimpleGrid.get({},{}) index out of bounds (width={}, height={})", x, y, self.width, self.height);
         }
@@ -160,7 +160,7 @@ impl<T> Grid for SimpleGrid<T> {
         &self.rows[y][x]
     }
 
-     fn get_mut<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Self::Item {
+     fn get_mut(&mut self, x: usize, y: usize) -> &mut Self::Item {
         if (x >= self.width) || (y >= self.height) {
             panic!("SimpleGrid.get_mut({},{}) index out of bounds (width={}, height={})", x, y, self.width, self.height);
         }
@@ -194,7 +194,7 @@ impl<T> SimpleGrid<T> where T: Display {
     /// 
     /// To write to standard-out, `grid.write(&mut stdout())`.
     pub fn write(&self, w: &mut dyn Write) {
-        w.write(format!("/{}\\\n", "-".repeat(self.width)).as_bytes());
+        w.write_all(format!("/{}\\\n", "-".repeat(self.width)).as_bytes());
         
         let mut line = String::with_capacity(self.width);
         for row in &self.rows {
@@ -202,11 +202,11 @@ impl<T> SimpleGrid<T> where T: Display {
                 line += format!("{}", column).as_str();
             }
             
-            w.write(format!("|{}|\n", line).as_bytes());
+            w.write_all(format!("|{}|\n", line).as_bytes());
             line.clear();
         }
 
-        w.write(format!("\\{}/\n", "-".repeat(self.width)).as_bytes());
+        w.write_all(format!("\\{}/\n", "-".repeat(self.width)).as_bytes());
     }
 }
 
@@ -416,7 +416,7 @@ impl<T> SparseGrid<T> where T: Default {
     /// 
     /// If no value has been explicitly set for the given coordinates,
     /// `None` is returned.
-    pub fn get_option<'a>(&'a self, x: usize, y: usize) -> Option<&'a T> {
+    pub fn get_option(&self, x: usize, y: usize) -> Option<&T> {
         self.items.get(&(x, y))
     } 
 
@@ -424,7 +424,7 @@ impl<T> SparseGrid<T> where T: Default {
     /// 
     /// If no value has been explicitly set for the given coordinates,
     /// `None` is returned.
-    pub fn get_mut_option<'a>(&'a mut self, x: usize, y: usize) -> Option<&'a mut T> {
+    pub fn get_mut_option(&mut self, x: usize, y: usize) -> Option<&mut T> {
         self.items.get_mut(&(x, y))
     } 
 }
@@ -432,28 +432,30 @@ impl<T> SparseGrid<T> where T: Default {
 impl<T> Grid for SparseGrid<T> where T: Default {
     type Item = T;
 
-    fn get<'a>(&'a self, x: usize, y: usize) -> &'a Self::Item {
+    fn get(&self, x: usize, y: usize) -> &Self::Item {
         match self.items.get(&(x, y)) {
             Some(x) => x,
             None => &self.default
         }
     }
 
-    fn get_mut<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Self::Item {
-        if !self.items.contains_key(&(x, y)) {
-            self.items.insert((x, y), T::default());
-        }
-
-        self.items.get_mut(&(x, y)).unwrap()
+    fn get_mut(&mut self, x: usize, y: usize) -> &mut Self::Item {
+        self.items.entry((x, y)).or_insert_with(|| T::default())
     }
 
     fn set(&mut self, x: usize, y: usize, value: Self::Item) {
-        if self.items.contains_key(&(x, y)) {
-            *self.get_mut(x, y) = value;
+        if let Entry::Vacant(e) = self.items.entry((x, y)) {
+            e.insert(value);
         }
         else {
-            self.items.insert((x, y), value);
+            *self.get_mut(x, y) = value;
         }
+    }
+}
+
+impl<T> Default for SparseGrid<T> where T: Default {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -26,7 +26,7 @@
 
 #[cfg(test)]
 
-mod test_simple {
+mod test_simplegrid {
     use crate::grid::*;
 
     #[test]

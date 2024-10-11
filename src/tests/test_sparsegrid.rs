@@ -26,7 +26,7 @@
 
 #[cfg(test)]
 
-mod test_sparse {
+mod test_sparsegrid {
     use crate::grid::*;
 
     #[test]

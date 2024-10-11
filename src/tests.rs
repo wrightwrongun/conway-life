@@ -28,5 +28,5 @@ mod test_env;
 mod test_file;
 mod test_gridcell;
 mod test_life;
-mod test_simple;
-mod test_sparse;
+mod test_simplegrid;
+mod test_sparsegrid;
