@@ -127,9 +127,12 @@ impl<'a> FileParser<'a> {
             reader: self.buffer.reader(),
             path: self.path.clone(),
             line_number: 0,
-            symbols: HashMap::new(),
-            symbol_name: None,
-            buffered_cells: Vec::new()
+            grid_dimensions: None,
+            state: ParserState {
+                symbols: HashMap::new(),
+                symbol_name: None,
+                buffered_cells: Vec::new()
+            }
         }
     }
 
@@ -149,6 +152,11 @@ pub struct FileIterator<'a> {
     reader: BufReader<BufferSlice<'a>>,
     path: Option<String>,
     line_number: u32,
+    grid_dimensions: Option<CellCoords>,
+    state: ParserState
+}
+
+struct ParserState {
     symbols: HashMap<String, SymbolDefinition>,
     buffered_cells: Vec<CellCoords>,
     symbol_name: Option<String>
@@ -202,25 +210,25 @@ impl<'a> FileIterator<'a> {
             self.fatal_error("symbol has no name".to_string());
         }
         
-        if self.symbol_name.is_some() {
+        if self.state.symbol_name.is_some() {
             self.fatal_error(format!("nested symbol definition '{}' is not supported", name));
         }
 
         let symbol = SymbolDefinition::new(name);
 
-        if let Entry::Vacant(e) = self.symbols.entry(String::from(name)) {
+        if let Entry::Vacant(e) = self.state.symbols.entry(String::from(name)) {
             e.insert(symbol);
         }
         else {
-            self.symbols.entry(String::from(name)).or_insert(symbol);
+            self.state.symbols.entry(String::from(name)).or_insert(symbol);
         }
 
-        self.symbol_name = Some(String::from(name));
+        self.state.symbol_name = Some(String::from(name));
     }
 
     fn parse_symbol_define_end(&mut self) {
-        if self.symbol_name.is_some() {
-            self.symbol_name = None;
+        if self.state.symbol_name.is_some() {
+            self.state.symbol_name = None;
         }
         else {
             self.fatal_error("unexpected end of symbol definition".to_string());
@@ -232,20 +240,25 @@ impl<'a> FileIterator<'a> {
             let name = name.trim();
             let offset = Self::parse_pair(cell).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", cell, self.line_number, self.path.unwrap_display_or("*unknown*")));
         
-            if let Some(symbol) = self.symbols.get(&String::from(name)) {
+            // Can't use a symbol before specifying grid dimensions...
+            if self.grid_dimensions.is_none() {
+                self.fatal_error(format!("use of symbol '{}' before grid-size", name));
+            }
+
+            if let Some(symbol) = self.state.symbols.get(&String::from(name)) {
                 let mut cells: Vec<CellCoords> = symbol.cells
                                                     .iter()
                                                     .map(|c| (c.0 + offset.0, c.1 + offset.1))
                                                     .collect();
 
-                match self.symbol_name {
+                match self.state.symbol_name {
                     Some(ref name) => {
-                        let symbol_entry = self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cells(&cells));
+                        let symbol_entry = self.state.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cells(&cells));
                     },
                     None => {
-                        self.buffered_cells.append(&mut cells);
+                        self.state.buffered_cells.append(&mut cells);
 
-                        return self.buffered_cells.pop();
+                        return self.state.buffered_cells.pop();
                     }
                 }
             }
@@ -262,14 +275,35 @@ impl<'a> FileIterator<'a> {
 
     fn parse_cell(&mut self, line: String) -> Option<CellCoords> {
         let cell = Self::parse_pair(&line).unwrap_or_exit(format!("error: cannot parse '{}' as a coordinate pair, at line {} of file '{}'", line, self.line_number, self.path.unwrap_display_or("*unknown*")));
-        match self.symbol_name {
+        match self.state.symbol_name {
             Some(ref name) => {
-                self.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cell(cell));
+                self.state.symbols.entry(name.clone()).and_modify(|symbol| symbol.push_cell(cell));
                 None
             },
             None => {
+                // Has a grid-size been given (grid-size is the first pair)
+                // in the file to be parsed...
+                if self.grid_dimensions.is_some() {
+                    self.validate_cell(cell.0, cell.1);
+                }
+                else {
+                    self.grid_dimensions = Some(cell);
+                }
+                
                 Some(cell)
             }
+        }
+    }
+
+    fn validate_cell(&self, x: usize, y: usize) {
+        if let Some((width, height)) = self.grid_dimensions {
+            if (x >= width) || (y >= height) {
+                self.fatal_error(format!("cell location ({},{}) out of bounds ({},{})", x, y, width, height));
+            }
+        }
+        else {
+            // This should never be reached - but just in case...
+            self.fatal_error("grid size has not been set".to_string());
         }
     }
 }
@@ -281,8 +315,11 @@ impl<'a> Iterator for FileIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         // Firstly return cells that have been provided by use of
         // symbols...
-        if !self.buffered_cells.is_empty() {
-            return self.buffered_cells.pop();
+        if !self.state.buffered_cells.is_empty() {
+            if let Some((x, y)) = self.state.buffered_cells.pop() {
+                self.validate_cell(x, y);
+                return Some((x, y));
+            }
         }
 
         // Loop through the lines until a cell can be returned...
