@@ -100,6 +100,11 @@ type CellCoords = (usize, usize);
 pub struct FileParser<'a> {
     buffer: ReadBuffer<'a>,
     path: Option<String>,
+    allow_fatal: bool       // <--- Flag (normally set to true) to allow a
+                            //      parsing error to cause a 'clean' exit.
+                            //      If this is set to false, instead of an
+                            //      exit, there is a panic. This allows tests
+                            //      to behave correctly. [See 'set_test()'.]
 }
 
 impl<'a> FileParser<'a> {
@@ -117,7 +122,8 @@ impl<'a> FileParser<'a> {
     pub fn init(buffer: ReadBuffer<'a>, path: Option<String>) -> Self {
         Self {
             buffer,
-            path
+            path,
+            allow_fatal: true
         }
     }
 
@@ -128,6 +134,7 @@ impl<'a> FileParser<'a> {
             path: self.path.clone(),
             line_number: 0,
             grid_dimensions: None,
+            allow_fatal: self.allow_fatal,
             state: ParserState {
                 symbols: HashMap::new(),
                 symbol_name: None,
@@ -145,6 +152,12 @@ impl<'a> FileParser<'a> {
     pub fn get_path(&self) -> Option<String> {
         self.path.clone()
     }
+
+    // Sets a flag to cause a panic instead of a 'clean' exit
+    // when 'FileIterator.fatal_error()' is called.
+    pub fn set_test(&mut self) {
+        self.allow_fatal = false;
+    }
 }
 
 /// Iterates over the parsed contents of a 'life' file.
@@ -153,6 +166,7 @@ pub struct FileIterator<'a> {
     path: Option<String>,
     line_number: u32,
     grid_dimensions: Option<CellCoords>,
+    allow_fatal: bool,
     state: ParserState
 }
 
@@ -187,7 +201,14 @@ impl<'a> FileIterator<'a> {
     }
 
     fn fatal_error(&self, message: String) {
-        exit_with_error(format!("error: {}, at line {} of file '{}'", message, self.line_number, self.path.unwrap_display_or("*unknown*")));
+        let message = format!("error: {}, at line {} of file '{}'", message, self.line_number, self.path.unwrap_display_or("*unknown*"));
+        
+        if self.allow_fatal {
+            exit_with_error(message);
+        }
+        else {
+            panic!("{}", message);
+        }
     }
     
     /// Converts a string containing a numeric pair into a tuple
